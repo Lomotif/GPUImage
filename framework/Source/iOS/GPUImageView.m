@@ -8,7 +8,7 @@
 #pragma mark -
 #pragma mark Private methods and instance variables
 
-@interface GPUImageView () 
+@interface GPUImageView ()
 {
     GPUImageFramebuffer *inputFramebufferForDisplay;
     GLuint displayRenderbuffer, displayFramebuffer;
@@ -16,12 +16,13 @@
     GLProgram *displayProgram;
     GLint displayPositionAttribute, displayTextureCoordinateAttribute;
     GLint displayInputTextureUniform;
-
+    
     CGSize inputImageSize;
     GLfloat imageVertices[8];
     GLfloat backgroundColorRed, backgroundColorGreen, backgroundColorBlue, backgroundColorAlpha;
-
+    
     CGSize boundsSizeAtFrameBufferEpoch;
+    CGRect currentViewBounds;
 }
 
 @property (assign, nonatomic) NSUInteger aspectRatio;
@@ -48,16 +49,16 @@
 #pragma mark -
 #pragma mark Initialization and teardown
 
-+ (Class)layerClass 
++ (Class)layerClass
 {
-	return [CAEAGLLayer class];
+    return [CAEAGLLayer class];
 }
 
 - (id)initWithFrame:(CGRect)frame
 {
     if (!(self = [super initWithFrame:frame]))
     {
-		return nil;
+        return nil;
     }
     
     [self commonInit];
@@ -67,31 +68,31 @@
 
 -(id)initWithCoder:(NSCoder *)coder
 {
-	if (!(self = [super initWithCoder:coder])) 
+    if (!(self = [super initWithCoder:coder]))
     {
         return nil;
-	}
-
+    }
+    
     [self commonInit];
-
-	return self;
+    
+    return self;
 }
 
 - (void)commonInit;
 {
-    // Set scaling to account for Retina display	
+    // Set scaling to account for Retina display
     if ([self respondsToSelector:@selector(setContentScaleFactor:)])
     {
         self.contentScaleFactor = [[UIScreen mainScreen] scale];
     }
-
+    
     inputRotation = kGPUImageNoRotation;
     self.opaque = YES;
     self.hidden = NO;
     CAEAGLLayer *eaglLayer = (CAEAGLLayer *)self.layer;
     eaglLayer.opaque = YES;
     eaglLayer.drawableProperties = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:NO], kEAGLDrawablePropertyRetainedBacking, kEAGLColorFormatRGBA8, kEAGLDrawablePropertyColorFormat, nil];
-
+    
     self.enabled = YES;
     
     runSynchronouslyOnVideoProcessingQueue(^{
@@ -119,7 +120,7 @@
         displayPositionAttribute = [displayProgram attributeIndex:@"position"];
         displayTextureCoordinateAttribute = [displayProgram attributeIndex:@"inputTextureCoordinate"];
         displayInputTextureUniform = [displayProgram uniformIndex:@"inputImageTexture"]; // This does assume a name of "inputTexture" for the fragment shader
-
+        
         [GPUImageContext setActiveShaderProgram:displayProgram];
         glEnableVertexAttribArray(displayPositionAttribute);
         glEnableVertexAttribArray(displayTextureCoordinateAttribute);
@@ -133,15 +134,17 @@
 - (void)layoutSubviews {
     [super layoutSubviews];
     
+    // Store current view size value
+    currentViewBounds = self.bounds;
+    
     // The frame buffer needs to be trashed and re-created when the view size changes.
     if (!CGSizeEqualToSize(self.bounds.size, boundsSizeAtFrameBufferEpoch) &&
         !CGSizeEqualToSize(self.bounds.size, CGSizeZero)) {
         runSynchronouslyOnVideoProcessingQueue(^{
             [self destroyDisplayFramebuffer];
             [self createDisplayFramebuffer];
+            [self recalculateViewGeometry];
         });
-    } else if (!CGSizeEqualToSize(self.bounds.size, CGSizeZero)) {
-        [self recalculateViewGeometry];
     }
 }
 
@@ -161,14 +164,14 @@
     
     glGenFramebuffers(1, &displayFramebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, displayFramebuffer);
-	
+    
     glGenRenderbuffers(1, &displayRenderbuffer);
     glBindRenderbuffer(GL_RENDERBUFFER, displayRenderbuffer);
-	
+    
     [[[GPUImageContext sharedImageProcessingContext] context] renderbufferStorage:GL_RENDERBUFFER fromDrawable:(CAEAGLLayer*)self.layer];
-	
+    
     GLint backingWidth, backingHeight;
-
+    
     glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH, &backingWidth);
     glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT, &backingHeight);
     
@@ -180,33 +183,31 @@
     
     _sizeInPixels.width = (CGFloat)backingWidth;
     _sizeInPixels.height = (CGFloat)backingHeight;
-
-//    NSLog(@"Backing width: %d, height: %d", backingWidth, backingHeight);
-
+    
+    //    NSLog(@"Backing width: %d, height: %d", backingWidth, backingHeight);
+    
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, displayRenderbuffer);
-	
-    __unused GLuint framebufferCreationStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    
+    GLuint framebufferCreationStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     NSAssert(framebufferCreationStatus == GL_FRAMEBUFFER_COMPLETE, @"Failure with display framebuffer generation for display of size: %f, %f", self.bounds.size.width, self.bounds.size.height);
     boundsSizeAtFrameBufferEpoch = self.bounds.size;
-
-    [self recalculateViewGeometry];
 }
 
 - (void)destroyDisplayFramebuffer;
 {
     [GPUImageContext useImageProcessingContext];
-
+    
     if (displayFramebuffer)
-	{
-		glDeleteFramebuffers(1, &displayFramebuffer);
-		displayFramebuffer = 0;
-	}
-	
-	if (displayRenderbuffer)
-	{
-		glDeleteRenderbuffers(1, &displayRenderbuffer);
-		displayRenderbuffer = 0;
-	}
+    {
+        glDeleteFramebuffers(1, &displayFramebuffer);
+        displayFramebuffer = 0;
+    }
+    
+    if (displayRenderbuffer)
+    {
+        glDeleteRenderbuffers(1, &displayRenderbuffer);
+        displayRenderbuffer = 0;
+    }
 }
 
 - (void)setDisplayFramebuffer;
@@ -235,12 +236,12 @@
     runSynchronouslyOnVideoProcessingQueue(^{
         CGFloat heightScaling, widthScaling;
         
-        CGSize currentViewSize = self.bounds.size;
+        CGSize currentViewSize = currentViewBounds.size;
         
         //    CGFloat imageAspectRatio = inputImageSize.width / inputImageSize.height;
         //    CGFloat viewAspectRatio = currentViewSize.width / currentViewSize.height;
         
-        CGRect insetRect = AVMakeRectWithAspectRatioInsideRect(inputImageSize, self.bounds);
+        CGRect insetRect = AVMakeRectWithAspectRatioInsideRect(inputImageSize, currentViewBounds);
         
         switch(_fillMode)
         {
@@ -272,12 +273,12 @@
         imageVertices[7] = heightScaling;
     });
     
-//    static const GLfloat imageVertices[] = {
-//        -1.0f, -1.0f,
-//        1.0f, -1.0f,
-//        -1.0f,  1.0f,
-//        1.0f,  1.0f,
-//    };
+    //    static const GLfloat imageVertices[] = {
+    //        -1.0f, -1.0f,
+    //        1.0f, -1.0f,
+    //        -1.0f,  1.0f,
+    //        1.0f,  1.0f,
+    //    };
 }
 
 - (void)setBackgroundColorRed:(GLfloat)redComponent green:(GLfloat)greenComponent blue:(GLfloat)blueComponent alpha:(GLfloat)alphaComponent;
@@ -290,12 +291,12 @@
 
 + (const GLfloat *)textureCoordinatesForRotation:(GPUImageRotationMode)rotationMode;
 {
-//    static const GLfloat noRotationTextureCoordinates[] = {
-//        0.0f, 0.0f,
-//        1.0f, 0.0f,
-//        0.0f, 1.0f,
-//        1.0f, 1.0f,
-//    };
+    //    static const GLfloat noRotationTextureCoordinates[] = {
+    //        0.0f, 0.0f,
+    //        1.0f, 0.0f,
+    //        0.0f, 1.0f,
+    //        1.0f, 1.0f,
+    //    };
     
     static const GLfloat noRotationTextureCoordinates[] = {
         0.0f, 1.0f,
@@ -303,21 +304,21 @@
         0.0f, 0.0f,
         1.0f, 0.0f,
     };
-
+    
     static const GLfloat rotateRightTextureCoordinates[] = {
         1.0f, 1.0f,
         1.0f, 0.0f,
         0.0f, 1.0f,
         0.0f, 0.0f,
     };
-
+    
     static const GLfloat rotateLeftTextureCoordinates[] = {
         0.0f, 0.0f,
         0.0f, 1.0f,
         1.0f, 0.0f,
         1.0f, 1.0f,
     };
-        
+    
     static const GLfloat verticalFlipTextureCoordinates[] = {
         0.0f, 0.0f,
         1.0f, 0.0f,
@@ -340,12 +341,12 @@
     };
     
     static const GLfloat rotateRightHorizontalFlipTextureCoordinates[] = {
-        0.0f, 1.0f,
-        0.0f, 0.0f,
         1.0f, 1.0f,
         1.0f, 0.0f,
+        0.0f, 1.0f,
+        0.0f, 0.0f,
     };
-
+    
     static const GLfloat rotate180TextureCoordinates[] = {
         1.0f, 0.0f,
         0.0f, 0.0f,
@@ -482,3 +483,4 @@
 }
 
 @end
+
