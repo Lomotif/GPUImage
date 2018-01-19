@@ -27,6 +27,7 @@
 
     self.compositon = compositon;
     self.videoComposition = videoComposition;
+    self.asset = compositon;
     self.audioMix = audioMix;
 
     return self;
