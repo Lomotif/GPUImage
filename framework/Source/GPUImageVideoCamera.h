@@ -50,7 +50,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] );
 @property(readonly, retain, nonatomic) AVCaptureSession *captureSession;
 
 /// This enables the capture session preset to be changed on the fly
-@property (readwrite, nonatomic, copy) NSString *captureSessionPreset;
+@property (readwrite, nonatomic, copy) AVCaptureSessionPreset captureSessionPreset;
 
 /// This sets the frame rate of the camera (iOS 5 and above only)
 /**
@@ -85,7 +85,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] );
  @param sessionPreset Session preset to use
  @param cameraPosition Camera to capture from
  */
-- (id)initWithSessionPreset:(NSString *)sessionPreset cameraPosition:(AVCaptureDevicePosition)cameraPosition;
+- (id)initWithSessionPreset:(AVCaptureSessionPreset)sessionPreset cameraPosition:(AVCaptureDevicePosition)cameraPosition;
 
 /** Add audio capture to the session. Adding inputs and outputs freezes the capture session momentarily, so you
     can use this method to add the audio inputs and outputs early, if you're going to set the audioEncodingTarget 
