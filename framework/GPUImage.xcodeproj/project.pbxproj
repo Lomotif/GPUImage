@@ -1981,6 +1981,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = BCF1A32914DDB1EC00852800;
@@ -2417,6 +2418,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MARKETING_VERSION = 0.1.9;
 				MODULEMAP_FILE = Source/iOS/Framework/module.modulemap;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sunsetlakesoftware.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_MODULE_NAME = GPUImage;
@@ -2449,6 +2451,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MARKETING_VERSION = 0.1.9;
 				MODULEMAP_FILE = Source/iOS/Framework/module.modulemap;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sunsetlakesoftware.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_MODULE_NAME = GPUImage;
