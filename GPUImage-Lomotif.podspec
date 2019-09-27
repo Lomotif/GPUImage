@@ -1,5 +1,5 @@
 Pod::Spec.new do |s|
-  s.name        = 'GPUImageLomotifFork'
+  s.name        = 'GPUImage-Lomotif'
   s.module_name = 'GPUImage'
   s.version     = '0.1.8'
   s.license     = 'BSD'
